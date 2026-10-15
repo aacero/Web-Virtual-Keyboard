@@ -5,6 +5,8 @@
 #define MASTER_PASS     "password" // Master password for web UI
 #define WIFI_SSID       "ssid"     // Wi-Fi network SSID
 #define WIFI_PASS       "password" // Wi-Fi network password
+//#define WIFI_SSID_2     "secondary_ssid"     // Optional secondary Wi-Fi network
+//#define WIFI_PASS_2     "secondary_password" // Optional secondary Wi-Fi network password
 #define TYPE_DELAY_MS   40
 #define CHORD_PRESS_MS  12         // How long a special key / chord is held before release
 #define UART_RX_PIN     44

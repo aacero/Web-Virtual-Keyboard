@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <WiFiMulti.h>
+#include <ESPmDNS.h>
 
 #include "config.h"
 #include "storage.h"
@@ -9,18 +11,23 @@
 #include "sd_card.h"
 #include "pinout.h"
 
+static WiFiMulti wifiMulti;
 
 bool connectWiFi()
 {
-	LogSerial.printf("[WiFi] Connecting to \"%s\"...", WIFI_SSID);
-
-	WiFi.setHostname(HOSTNAME);
 	WiFi.mode(WIFI_MODE_STA);
-	WiFi.begin(WIFI_SSID, WIFI_PASS);
+	WiFi.setHostname(HOSTNAME);
+
+	wifiMulti.addAP(WIFI_SSID, WIFI_PASS);
+#if defined(WIFI_SSID_2) && defined(WIFI_PASS_2)
+	wifiMulti.addAP(WIFI_SSID_2, WIFI_PASS_2);
+#endif
+
+	LogSerial.printf("[WiFi] Scanning & connecting to known APs...");
 
 	const uint32_t start = millis();
 
-	while (WiFi.status() != WL_CONNECTED && (millis() - start) < 20000U)
+	while (wifiMulti.run() != WL_CONNECTED && (millis() - start) < 20000U)
 	{
 		delay(250);
 		LogSerial.print('.');
@@ -30,7 +37,12 @@ bool connectWiFi()
 
 	if (WiFi.status() == WL_CONNECTED)
 	{
-		LogSerial.printf("[WiFi] OK: %s\r\n", WiFi.localIP().toString().c_str());
+		LogSerial.printf("[WiFi] Connected to \"%s\", IP: %s\r\n", WiFi.SSID().c_str(), WiFi.localIP().toString().c_str());
+		if (MDNS.begin(HOSTNAME))
+		{
+			MDNS.addService("http", "tcp", SERVER_PORT);
+			LogSerial.printf("[mDNS] Responder started: http://%s.local\r\n", HOSTNAME);
+		}
 		return true;
 	}
 
@@ -155,7 +167,7 @@ void loop()
 				LogSerial.println("[Button] Short press -> checking WiFi / updating display...");
 				if (WiFi.status() != WL_CONNECTED)
 				{
-					WiFi.reconnect();
+					wifiMulti.run();
 				}
 #if ENABLE_DISPLAY
 				if (WiFi.status() == WL_CONNECTED)
@@ -190,8 +202,8 @@ void loop()
 				display_write_word(COLOR_ERROR, Align::RIGHT, 5, "Reconnecting...");
 #endif
 			}
-			LogSerial.println("[WiFi] Attempting reconnect...");
-			WiFi.reconnect();
+			LogSerial.println("[WiFi] Attempting reconnect via WiFiMulti...");
+			wifiMulti.run();
 
 			// If disconnected for > 3 minutes (180,000 ms), reboot to self-heal
 			if (now - wifiDisconnectStart >= 180000)
