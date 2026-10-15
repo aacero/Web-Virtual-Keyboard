@@ -82,6 +82,7 @@ void setup()
 	server.on("/type", HTTP_POST, handleType);
 	server.on("/info", HTTP_GET, handleGetInfo);
 	server.on("/reboot", HTTP_POST, handleReboot);
+	server.on("/update", HTTP_POST, handleUpdate, handleUpdateChunk);
 	server.on("/presets", HTTP_GET, handleGetPresets);
 	server.on("/presets", HTTP_POST, handlePostPreset);
 	server.on("/presets", HTTP_DELETE, handleDeletePreset);

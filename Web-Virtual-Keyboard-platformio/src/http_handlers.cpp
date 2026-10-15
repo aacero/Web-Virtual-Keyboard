@@ -8,6 +8,8 @@
 #include "storage.h"
 #include "html.h" // will be generated automatically when building
 #include "display.h"
+#include <Update.h>
+
 
 // === SPECIAL KEY TABLE ===
 // Preset values are literal text with embedded <TOKEN> keys. Each token maps to
@@ -760,5 +762,63 @@ void handleReboot()
 	delay(500);
 	ESP.restart();
 }
+
+// POST /update (requires auth)
+void handleUpdate()
+{
+	if (!requireAuth()) { return; }
+	server.sendHeader("Connection", "close");
+	if (Update.hasError())
+	{
+		server.send(500, "application/json", "{\"status\":\"error\",\"message\":\"Update failed\"}");
+	}
+	else
+	{
+		server.send(200, "application/json", "{\"status\":\"ok\",\"message\":\"Rebooting with new firmware...\"}");
+		delay(1000);
+		ESP.restart();
+	}
+}
+
+void handleUpdateChunk()
+{
+	HTTPUpload& upload = server.upload();
+	if (upload.status == UPLOAD_FILE_START)
+	{
+		LogSerial.printf("[OTA] Starting firmware update: %s\r\n", upload.filename.c_str());
+#if ENABLE_DISPLAY
+		display_write_word(COLOR_WARN, Align::RIGHT, 5, "Updating FW...");
+#endif
+		if (!Update.begin(UPDATE_SIZE_UNKNOWN))
+		{
+			Update.printError(LogSerial);
+		}
+	}
+	else if (upload.status == UPLOAD_FILE_WRITE)
+	{
+		if (Update.write(upload.buf, upload.currentSize) != upload.currentSize)
+		{
+			Update.printError(LogSerial);
+		}
+	}
+	else if (upload.status == UPLOAD_FILE_END)
+	{
+		if (Update.end(true))
+		{
+			LogSerial.printf("[OTA] Update successful: %u bytes\r\n", (unsigned)upload.totalSize);
+#if ENABLE_DISPLAY
+			display_write_word(COLOR_OK, Align::RIGHT, 5, "Update OK!");
+#endif
+		}
+		else
+		{
+			Update.printError(LogSerial);
+#if ENABLE_DISPLAY
+			display_write_word(COLOR_ERROR, Align::RIGHT, 5, "Update FAIL");
+#endif
+		}
+	}
+}
+
 
 
