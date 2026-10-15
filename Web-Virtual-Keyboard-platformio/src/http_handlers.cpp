@@ -150,7 +150,9 @@ void sendValue(const String& v)
 				    name.startsWith("WAIT ")  || name.startsWith("WAIT:"))
 				{
 					flushLiteral();
+					releaseHeld(-1);
 					int sp = name.indexOf(' ');
+
 					if (sp < 0) { sp = name.indexOf(':'); }
 					int ms = name.substring(sp + 1).toInt();
 					if (ms > 0 && ms <= 60000)
@@ -160,6 +162,7 @@ void sendValue(const String& v)
 					i = close + 1;
 					continue;
 				}
+
 
 				const KeyDef* kd = lookupKey(name);
 				if (kd != nullptr)
@@ -357,7 +360,13 @@ void handleRoot()
 void handleType() {
 	if (!requireAuth()) return;
 
+	if (isPayloadRunning()) {
+		server.send(409, "text/plain", "A payload is currently executing over USB");
+		return;
+	}
+
 	if (!server.hasArg("text")) {
+
 		server.send(400, "text/plain", "Missing 'text'");
 		return;
 	}
@@ -523,7 +532,14 @@ void handleSendPreset()
 
 	const String value = doc.as<JsonArray>()[idx]["value"] | "";
 
+	if (isPayloadRunning())
+	{
+		server.send(409, "text/plain", "A payload is currently executing over USB");
+		return;
+	}
+
 	LogSerial.printf("[SEND] preset \"%s\" len=%u\r\n", name.c_str(), (unsigned)value.length());
+
 
 	Keyboard.releaseAll();
 	delay(10);
@@ -550,7 +566,8 @@ void handleSdStatus()
 	json += "\"type\":\"" + getSdCardTypeName() + "\",";
 	json += "\"totalMB\":" + String((unsigned long)(getSdTotalBytes() / (1024ULL * 1024ULL))) + ",";
 	json += "\"usedMB\":" + String((unsigned long)(getSdUsedBytes() / (1024ULL * 1024ULL))) + ",";
-	json += "\"freeMB\":" + String((unsigned long)(getSdFreeBytes() / (1024ULL * 1024ULL)));
+	json += "\"freeMB\":" + String((unsigned long)(getSdFreeBytes() / (1024ULL * 1024ULL))) + ",";
+	json += "\"running\":" + String(isPayloadRunning() ? "true" : "false");
 	json += "}";
 
 	server.send(200, "application/json; charset=utf-8", json);
@@ -613,12 +630,20 @@ void handleSdFile()
 	f.close();
 }
 
-// Upload chunk handler
+// Upload chunk handler with robust error tracking
 static File sdUploadFile;
+static bool sdUploadOk = false;
+static String sdUploadErr = "";
 
 void handleSdUpload()
 {
 	if (!requireAuth()) { return; }
+	if (!sdUploadOk)
+	{
+		String errMsg = sdUploadErr.length() ? sdUploadErr : "Upload failed";
+		server.send(500, "application/json", "{\"status\":\"error\",\"message\":\"" + errMsg + "\"}");
+		return;
+	}
 	server.send(200, "application/json", "{\"status\":\"ok\"}");
 }
 
@@ -627,25 +652,52 @@ void handleSdUploadChunk()
 	if (!server.authenticate(MASTER_USER, MASTER_PASS))
 	{
 		if (sdUploadFile) { sdUploadFile.close(); }
+		sdUploadOk = false;
+		sdUploadErr = "Authentication failed";
 		return;
 	}
 
 	HTTPUpload& upload = server.upload();
 	if (upload.status == UPLOAD_FILE_START)
 	{
-		if (!isSdCardMounted()) { return; }
+		sdUploadOk = false;
+		sdUploadErr = "";
+
+		if (!isSdCardMounted())
+		{
+			sdUploadErr = "SD card not mounted";
+			return;
+		}
+
+		if (isPayloadRunning())
+		{
+			sdUploadErr = "Cannot upload while a payload is running";
+			return;
+		}
 
 		String filename = upload.filename;
 		if (!filename.startsWith("/")) { filename = "/" + filename; }
 
 		LogSerial.printf("[SD] Upload start: %s\r\n", filename.c_str());
 		sdUploadFile = SD_MMC.open(filename, FILE_WRITE);
+		if (!sdUploadFile)
+		{
+			sdUploadErr = "Failed to open destination file on SD";
+		}
 	}
 	else if (upload.status == UPLOAD_FILE_WRITE)
 	{
-		if (sdUploadFile)
+		if (sdUploadFile && sdUploadErr.length() == 0)
 		{
-			sdUploadFile.write(upload.buf, upload.currentSize);
+			if (upload.currentSize > 0)
+			{
+				size_t written = sdUploadFile.write(upload.buf, upload.currentSize);
+				if (written != upload.currentSize)
+				{
+					sdUploadErr = "Write error to SD card";
+					sdUploadFile.close();
+				}
+			}
 		}
 	}
 	else if (upload.status == UPLOAD_FILE_END)
@@ -653,8 +705,21 @@ void handleSdUploadChunk()
 		if (sdUploadFile)
 		{
 			sdUploadFile.close();
-			LogSerial.printf("[SD] Upload finished: %u bytes\r\n", (unsigned)upload.totalSize);
+			if (sdUploadErr.length() == 0)
+			{
+				sdUploadOk = true;
+				LogSerial.printf("[SD] Upload finished: %u bytes\r\n", (unsigned)upload.totalSize);
+			}
 		}
+	}
+	else if (upload.status == UPLOAD_FILE_ABORTED)
+	{
+		if (sdUploadFile)
+		{
+			sdUploadFile.close();
+		}
+		sdUploadOk = false;
+		sdUploadErr = "Upload aborted";
 	}
 }
 
@@ -666,6 +731,12 @@ void handleSdSave()
 	if (!isSdCardMounted())
 	{
 		server.send(400, "text/plain", "SD card not mounted");
+		return;
+	}
+
+	if (isPayloadRunning())
+	{
+		server.send(409, "text/plain", "Cannot save while a payload is running");
 		return;
 	}
 
@@ -697,6 +768,12 @@ void handleSdDelete()
 	if (!isSdCardMounted())
 	{
 		server.send(400, "text/plain", "SD card not mounted");
+		return;
+	}
+
+	if (isPayloadRunning())
+	{
+		server.send(409, "text/plain", "Cannot delete while a payload is running");
 		return;
 	}
 
@@ -740,18 +817,26 @@ void handleSdRun()
 	if (!path.startsWith("/")) { path = "/" + path; }
 
 	String err;
-	int lines = 0;
-	if (runSdPayload(path, &err, &lines))
+	if (startSdPayload(path, &err))
 	{
-		String res = "{\"status\":\"ok\",\"lines\":" + String(lines) + "}";
+		String res = "{\"status\":\"started\",\"file\":\"" + path + "\"}";
 		server.send(200, "application/json", res);
 	}
 	else
 	{
 		String res = "{\"status\":\"error\",\"message\":\"" + err + "\"}";
-		server.send(400, "application/json", res);
+		server.send(409, "application/json", res);
 	}
 }
+
+// POST /sd/stop
+void handleSdStop()
+{
+	if (!requireAuth()) { return; }
+	stopSdPayload();
+	server.send(200, "application/json", "{\"status\":\"stopped\"}");
+}
+
 
 // POST /reboot (requires auth)
 void handleReboot()

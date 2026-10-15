@@ -23,6 +23,8 @@ void handleSdUploadChunk();
 void handleSdSave();
 void handleSdDelete();
 void handleSdRun();
+void handleSdStop();
+
 
 // System reboot & OTA update handlers
 void handleReboot();
