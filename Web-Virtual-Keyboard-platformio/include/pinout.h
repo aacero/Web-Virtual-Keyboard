@@ -13,3 +13,6 @@
 #define SD_MMC_D1  17
 #define SD_MMC_D2  21
 #define SD_MMC_D3  18
+
+// Onboard user/BOOT button
+#define PIN_BUTTON 0

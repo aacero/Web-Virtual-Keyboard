@@ -751,3 +751,14 @@ void handleSdRun()
 	}
 }
 
+// POST /reboot (requires auth)
+void handleReboot()
+{
+	if (!requireAuth()) { return; }
+	LogSerial.println("[System] Reboot requested via HTTP API");
+	server.send(200, "application/json", "{\"status\":\"rebooting\"}");
+	delay(500);
+	ESP.restart();
+}
+
+

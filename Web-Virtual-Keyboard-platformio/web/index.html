@@ -425,8 +425,10 @@ input.invalid, textarea.invalid {
 			<label for="dongleSelect" class="small">Target:</label>
 			<select id="dongleSelect" class="dongle-select" title="Switch target dongle"></select>
 			<button id="manageDonglesBtn" class="icon-btn" type="button" title="Manage dongles">⚙️</button>
+			<button id="rebootBtn" class="icon-btn" type="button" title="Reboot this dongle">🔄</button>
 		</div>
 	</header>
+
 
 	<div class="main">
 
@@ -1271,6 +1273,24 @@ manageDonglesBtn.addEventListener("click", () => {
 });
 closeDongleModal.addEventListener("click", () => { dongleModal.hidden = true; });
 dongleModal.addEventListener("click", (e) => { if (e.target === dongleModal) dongleModal.hidden = true; });
+
+const rebootBtn = document.getElementById("rebootBtn");
+if (rebootBtn) {
+	rebootBtn.addEventListener("click", async () => {
+		if (!confirm("Are you sure you want to reboot this dongle?")) return;
+		setMsg("Rebooting dongle... page will reload in 6 seconds.", "");
+		rebootBtn.disabled = true;
+		try {
+			await fetch("/reboot", { method: "POST" });
+		} catch (e) {
+			// Expected network drop on reboot
+		}
+		setTimeout(() => {
+			window.location.reload();
+		}, 6000);
+	});
+}
+
 
 addDongleSubmit.addEventListener("click", () => {
 	const name = (newDongleName.value || "").trim();

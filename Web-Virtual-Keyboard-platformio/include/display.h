@@ -19,6 +19,8 @@
 #define COLOR_WHITE ST77XX_WHITE
 #define COLOR_OK    ST77XX_GREEN
 #define COLOR_ERROR ST77XX_RED
+#define COLOR_WARN  ST77XX_YELLOW
+
 
 enum Align
 {

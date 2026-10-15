@@ -24,4 +24,7 @@ void handleSdSave();
 void handleSdDelete();
 void handleSdRun();
 
+// System reboot handler
+void handleReboot();
+
 #endif
