@@ -58,6 +58,7 @@ Supported tokens:
 - Plug the native USB port into the target machine (and UART into another machine if you want to see the IP or logs).
     - On a successful Wi-Fi connection, the device IP is shown on the display and printed over UART.
 - Open `http://DEVICE_IP` in a browser (default port is `80`), log in, and start typing / managing presets.
+- For secure deployment using Tailscale with automated HTTPS on an always-on host, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
 # Notes
 - Presets are stored in the ESP32's flash (NVS). The firmware tracks a storage-layout version (`STORAGE_VERSION`); if it opens flash written by a different layout, the preset store is wiped and reinitialised - so a firmware upgrade that bumps that version will clear existing presets.
