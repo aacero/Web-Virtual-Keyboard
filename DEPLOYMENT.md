@@ -62,6 +62,7 @@ The reverse proxy containers are hosted on **`deerpark`** in `/srv/docker/esp32-
 ├── .env                   # Shared TS_AUTHKEY
 ├── serve.json             # Proxy config for dongle 1 (10.0.0.32:80)
 ├── serve-2.json           # Proxy config for dongle 2 (10.0.0.223:80)
+├── serve-3.json           # Proxy config for dongle 3 (10.0.0.250:80)
 └── update-ip.sh           # Helper script to update target IP
 ```
 
@@ -83,6 +84,7 @@ ssh -i ~/.ssh/hermes_automation acero@deerpark "cd /srv/docker/esp32-keyboard-ta
 | :--- | :--- | :--- | :--- |
 | **Dongle 1** | `10.0.0.32:80` | `esp32-keyboard` (`100.69.69.58`) | `https://esp32-keyboard.tail39fd85.ts.net` |
 | **Dongle 2** | `10.0.0.223:80` | `esp32-keyboard-2` (`100.69.69.70`) | `https://esp32-keyboard-2.tail39fd85.ts.net` |
+| **Dongle 3** | `10.0.0.250:80` | `esp32-keyboard-3` (`100.69.69.14`) | `https://esp32-keyboard-3.tail39fd85.ts.net` |
 
 Log in with the `MASTER_USER` and `MASTER_PASS` credentials set in `config.h`. Keystrokes and presets sent from the browser are encrypted over Tailscale and dispatched via the respective ESP32's native USB keyboard interface.
 
