@@ -76,10 +76,12 @@ void setup()
 
 	if(connectWiFi())
 	{
+		display_write_word(COLOR_WHITE, Align::RIGHT, 4, WiFi.SSID().c_str());
 		display_write_word(COLOR_OK, Align::RIGHT, 5, WiFi.localIP().toString().c_str());
 	}
 	else
 	{
+		display_write_word(COLOR_WHITE, Align::RIGHT, 4, "---");
 		display_write_word(COLOR_ERROR, Align::RIGHT, 5, "Disconnected");
 	}
 #else
@@ -172,10 +174,12 @@ void loop()
 #if ENABLE_DISPLAY
 				if (WiFi.status() == WL_CONNECTED)
 				{
+					display_write_word(COLOR_WHITE, Align::RIGHT, 4, WiFi.SSID().c_str());
 					display_write_word(COLOR_OK, Align::RIGHT, 5, WiFi.localIP().toString().c_str());
 				}
 				else
 				{
+					display_write_word(COLOR_WHITE, Align::RIGHT, 4, "---");
 					display_write_word(COLOR_ERROR, Align::RIGHT, 5, "Disconnected");
 				}
 #endif
@@ -199,6 +203,7 @@ void loop()
 				wifiDisconnectStart = now;
 				LogSerial.println("[WiFi] Lost connection!");
 #if ENABLE_DISPLAY
+				display_write_word(COLOR_WHITE, Align::RIGHT, 4, "---");
 				display_write_word(COLOR_ERROR, Align::RIGHT, 5, "Reconnecting...");
 #endif
 			}
@@ -222,6 +227,7 @@ void loop()
 			{
 				LogSerial.printf("[WiFi] Reconnected: %s\r\n", WiFi.localIP().toString().c_str());
 #if ENABLE_DISPLAY
+				display_write_word(COLOR_WHITE, Align::RIGHT, 4, WiFi.SSID().c_str());
 				display_write_word(COLOR_OK, Align::RIGHT, 5, WiFi.localIP().toString().c_str());
 #endif
 				wifiDisconnectStart = 0;

@@ -77,6 +77,6 @@ void display_init()
     sprintf(temp_string, "%d", getPresetsCount());
     display_write_word(COLOR_WHITE, Align::RIGHT, 3, temp_string);
 
-    display_write_word(COLOR_WHITE, Align::RIGHT, 4, WIFI_SSID);
+    display_write_word(COLOR_WHITE, Align::RIGHT, 4, "Connecting...");
     display_write_word(COLOR_ERROR, Align::RIGHT, 5, "Disconnected");  
 }
