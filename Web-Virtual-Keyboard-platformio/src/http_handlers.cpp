@@ -9,6 +9,7 @@
 #include "html.h" // will be generated automatically when building
 #include "display.h"
 #include <Update.h>
+#include <WiFi.h>
 
 
 // === SPECIAL KEY TABLE ===
@@ -388,18 +389,30 @@ void handleType() {
 }
 
 // GET /info
-// Small metadata endpoint so the web UI footer can show the firmware and storage
-// layout versions (compiled-in constants, not stored data).
+// Small metadata endpoint so the web UI can show firmware, storage
+// layout versions, connected WiFi SSID, and IP address.
 void handleGetInfo()
 {
 	if (!requireAuth()) { return; }
 
-	String out = "{\"fw\":\"";
-	out += FW_VERSION;
-	out += "\",\"storage\":\"";
-	out += STORAGE_VERSION;
-	out += "\"}";
+	DynamicJsonDocument infoDoc(256);
+	infoDoc["fw"] = FW_VERSION;
+	infoDoc["storage"] = STORAGE_VERSION;
+	if (WiFi.status() == WL_CONNECTED)
+	{
+		infoDoc["ssid"] = WiFi.SSID();
+		infoDoc["ip"] = WiFi.localIP().toString();
+		infoDoc["rssi"] = WiFi.RSSI();
+	}
+	else
+	{
+		infoDoc["ssid"] = "";
+		infoDoc["ip"] = "";
+		infoDoc["rssi"] = 0;
+	}
 
+	String out;
+	serializeJson(infoDoc, out);
 	server.send(200, "application/json; charset=utf-8", out);
 }
 

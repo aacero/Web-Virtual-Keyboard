@@ -62,6 +62,34 @@ body {
 .dongle-bar { display: inline-flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 8px; }
 .dongle-select { background: var(--field); color: var(--text); border: 1px solid var(--border); border-radius: 8px; height: 34px; padding: 0 10px; font-size: var(--fs-small); font-weight: 600; cursor: pointer; outline: none; }
 .dongle-select:focus { border-color: var(--accent-1); }
+.net-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: var(--field);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	height: 34px;
+	padding: 0 10px;
+	font-size: var(--fs-small);
+	font-weight: 600;
+	color: var(--text);
+}
+.net-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--ok);
+	box-shadow: 0 0 6px var(--ok);
+	flex-shrink: 0;
+}
+.net-sep { opacity: .4; }
+.net-ip {
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--accent-2);
+}
 
 textarea.masked { -webkit-text-security: disc; text-security: disc; }
 .btn-paste {
@@ -199,7 +227,7 @@ button:disabled{ opacity: .65; cursor: not-allowed; box-shadow: none; }
 .hr { height: 1px; background: var(--border); margin: 16px 0; }
 .small { font-size: var(--fs-small); color: var(--muted); }
 
-.footer { margin-top: auto; display: flex; justify-content: center; align-items: center; gap: 8px; color: var(--muted); padding: 2px 0 4px; }
+.footer { margin-top: auto; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; color: var(--muted); padding: 2px 0 4px; }
 .footer b { color: var(--text); font-weight: 700; }
 .footer-sep { opacity: .5; }
 /* ---------- Toast (global status, top-right, above the modal) ---------- */
@@ -429,6 +457,12 @@ input.invalid, textarea.invalid {
 	<header class="app-header">
 		<h1>Web Virtual Keyboard</h1>
 		<div class="dongle-bar">
+			<div id="netBadge" class="net-badge" title="Connected Wi-Fi & LAN IP" hidden>
+				<span class="net-dot"></span>
+				<span id="headerSsid"></span>
+				<span class="net-sep">·</span>
+				<span class="net-ip" id="headerIp"></span>
+			</div>
 			<label for="dongleSelect" class="small">Target:</label>
 			<select id="dongleSelect" class="dongle-select" title="Switch target dongle"></select>
 			<button id="manageDonglesBtn" class="icon-btn" type="button" title="Manage dongles">⚙️</button>
@@ -509,6 +543,10 @@ input.invalid, textarea.invalid {
 		</div>
 
 	<footer class="footer small">
+		<span>SSID&nbsp;<b id="wifiSsid">-</b></span>
+		<span class="footer-sep">·</span>
+		<span>IP&nbsp;<b id="wifiIp">-</b></span>
+		<span class="footer-sep">·</span>
 		<span>FW&nbsp;<b id="fwVer">-</b></span>
 		<span class="footer-sep">·</span>
 		<span>Storage&nbsp;<b id="storVer">-</b></span>
@@ -1143,7 +1181,7 @@ async function saveModal() {
 	}
 }
 
-/* ---------- Footer: firmware / storage versions ---------- */
+/* ---------- Footer & Header: firmware, storage, and network info ---------- */
 async function loadInfo() {
 	try {
 		const r = await fetch("/info");
@@ -1151,6 +1189,28 @@ async function loadInfo() {
 		const j = await r.json();
 		document.getElementById("fwVer").textContent   = j.fw || "?";
 		document.getElementById("storVer").textContent = j.storage || "?";
+
+		const ssid = j.ssid || "";
+		const ip   = j.ip || "";
+
+		const sEl = document.getElementById("wifiSsid");
+		if (sEl) sEl.textContent = ssid || "-";
+
+		const ipEl = document.getElementById("wifiIp");
+		if (ipEl) ipEl.textContent = ip || "-";
+
+		const netBadge = document.getElementById("netBadge");
+		if (netBadge) {
+			if (ssid || ip) {
+				const hsEl = document.getElementById("headerSsid");
+				const hipEl = document.getElementById("headerIp");
+				if (hsEl) hsEl.textContent = ssid || "Connected";
+				if (hipEl) hipEl.textContent = ip || "";
+				netBadge.hidden = false;
+			} else {
+				netBadge.hidden = true;
+			}
+		}
 	} catch (e) { /* leave the placeholders */ }
 }
 
@@ -1174,7 +1234,8 @@ document.addEventListener("keydown", (e) => {
 /* ---------- Dongle Switcher & Management ---------- */
 const DEFAULT_DONGLES = [
 	{ name: "Dongle 1 (esp32-keyboard)", url: "https://esp32-keyboard.tail39fd85.ts.net" },
-	{ name: "Dongle 2 (esp32-keyboard-2)", url: "https://esp32-keyboard-2.tail39fd85.ts.net" }
+	{ name: "Dongle 2 (esp32-keyboard-2)", url: "https://esp32-keyboard-2.tail39fd85.ts.net" },
+	{ name: "Dongle 3 (esp32-keyboard-3)", url: "https://esp32-keyboard-3.tail39fd85.ts.net" }
 ];
 
 const dongleSelect     = document.getElementById("dongleSelect");

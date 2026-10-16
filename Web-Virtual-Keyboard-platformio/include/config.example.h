@@ -14,7 +14,7 @@
 #define UART_BAUD       115200
 #define HOSTNAME        "web-virtual-keyboard"
 
-#define FW_VERSION          "1.2.1"
+#define FW_VERSION          "1.2.2"
 #define STORAGE_VERSION     "2.0"
 
 #define MAX_PRESET_LENGTH   64

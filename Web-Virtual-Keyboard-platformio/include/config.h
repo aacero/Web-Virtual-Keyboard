@@ -44,7 +44,7 @@
 #endif
 
 #ifndef FW_VERSION
-  #define FW_VERSION      "1.2.1"
+  #define FW_VERSION      "1.2.2"
 #endif
 #ifndef STORAGE_VERSION
   #define STORAGE_VERSION "2.0"
